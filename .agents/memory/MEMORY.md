@@ -1,0 +1,1 @@
+- [Gemini access](gemini-access.md) — TraceFixer currently uses the user's Gemini key rather than Replit AI Integrations.

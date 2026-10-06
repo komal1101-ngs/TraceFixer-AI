@@ -1,15 +1,16 @@
-# [Project name]
+# TraceFixer AI
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+TraceFixer AI diagnoses code errors across programming languages, saves each investigation, and keeps follow-up questions with the original debugging context.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/api-server run dev` — run the shared API server
+- `pnpm --filter @workspace/tracefixer-ai run dev` — run the web app
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- Required secrets: `DATABASE_URL`, `SESSION_SECRET`, and `GEMINI_API_KEY`
 
 ## Stack
 
@@ -22,23 +23,30 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/tracefixer-ai` — React web app and authenticated debugging workflows
+- `artifacts/api-server/src/routes` — API endpoints for auth and debugging sessions
+- `lib/db/src/schema/tracefixer.ts` — PostgreSQL schema
+- `lib/api-spec/openapi.yaml` — API contract and generated frontend/server validation types
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Account passwords are bcrypt-hashed; the API returns short-lived-context JWTs signed with `SESSION_SECRET`.
+- Gemini analysis uses the official Google GenAI SDK and the project-owned `GEMINI_API_KEY`.
+- Debug sessions, diagnoses, and messages are always scoped to the authenticated account.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Register and sign in to a private debugging workspace.
+- Submit source code and stack traces for structured Gemini analysis, including a root cause, severity, category, ordered fixes, corrected code, and prevention advice.
+- Search and filter saved sessions, resolve or reopen them, copy suggested patches, and ask contextual follow-up questions.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Preserve the requested target language coverage: Python, JavaScript, TypeScript, Go, Rust, Java, C++, C#, SQL, Ruby, PHP, Swift, Kotlin, and Bash.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- The web app uses generated API hooks; update the OpenAPI contract and rerun codegen before using new API operations in frontend code.
 
 ## Pointers
 

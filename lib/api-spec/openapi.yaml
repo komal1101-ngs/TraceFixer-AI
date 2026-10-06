@@ -3,13 +3,19 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: TraceFixer AI debugging sessions and diagnosis API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: User registration and authentication
+  - name: debugging
+    description: Debugging sessions, diagnosis, and follow-up chat
+security:
+  - bearerAuth: []
 paths:
   /healthz:
     get:
@@ -17,6 +23,7 @@ paths:
       tags: [health]
       summary: Health check
       description: Returns server health status
+      security: []
       responses:
         "200":
           description: Healthy
@@ -24,7 +31,222 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /auth/register:
+    post:
+      operationId: registerUser
+      tags: [auth]
+      summary: Register a user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Invalid registration details
+        "409":
+          description: Email or username is already registered
+  /auth/login:
+    post:
+      operationId: loginUser
+      tags: [auth]
+      summary: Sign in
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Authenticated user and signed token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Invalid request
+        "401":
+          description: Incorrect email or password
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: Return the signed-in user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Authentication required
+  /debug-sessions:
+    get:
+      operationId: listDebugSessions
+      tags: [debugging]
+      summary: Search and filter debugging sessions
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: language
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [open, resolved]
+      responses:
+        "200":
+          description: Matching debugging sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DebugSessionSummary"
+        "401":
+          description: Authentication required
+    post:
+      operationId: createDebugSession
+      tags: [debugging]
+      summary: Analyze code and save a debugging session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DebugSessionInput"
+      responses:
+        "201":
+          description: Diagnosis and saved debugging session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DebugSessionDetail"
+        "400":
+          description: Invalid code or error details
+        "401":
+          description: Authentication required
+        "502":
+          description: AI diagnosis service failed
+  /debug-sessions/summary:
+    get:
+      operationId: getDebugSummary
+      tags: [debugging]
+      summary: Get dashboard totals and language breakdown
+      responses:
+        "200":
+          description: Personal debugging activity summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DebugSummary"
+        "401":
+          description: Authentication required
+  /debug-sessions/{id}:
+    get:
+      operationId: getDebugSession
+      tags: [debugging]
+      summary: Get a debugging session with diagnosis and chat history
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Debug session detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DebugSessionDetail"
+        "401":
+          description: Authentication required
+        "404":
+          description: Session not found
+  /debug-sessions/{id}/status:
+    patch:
+      operationId: updateDebugSessionStatus
+      tags: [debugging]
+      summary: Mark a session open or resolved
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DebugSessionStatusInput"
+      responses:
+        "200":
+          description: Updated debugging session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DebugSessionSummary"
+        "401":
+          description: Authentication required
+        "404":
+          description: Session not found
+  /debug-sessions/{id}/messages:
+    post:
+      operationId: sendDebugMessage
+      tags: [debugging]
+      summary: Ask a follow-up question about a diagnosis
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DebugMessageInput"
+      responses:
+        "201":
+          description: User question and AI answer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DebugMessagePair"
+        "401":
+          description: Authentication required
+        "404":
+          description: Session not found
+        "502":
+          description: AI chat service failed
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +255,125 @@ components:
           type: string
       required:
         - status
+    RegisterInput:
+      type: object
+      properties:
+        username: { type: string, minLength: 2, maxLength: 50 }
+        email: { type: string, format: email, maxLength: 100 }
+        password: { type: string, minLength: 8, maxLength: 128 }
+      required: [username, email, password]
+    LoginInput:
+      type: object
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 1, maxLength: 128 }
+      required: [email, password]
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        username: { type: string }
+        email: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [id, username, email, createdAt]
+    AuthResponse:
+      type: object
+      properties:
+        token: { type: string }
+        user: { $ref: "#/components/schemas/User" }
+      required: [token, user]
+    DebugSessionInput:
+      type: object
+      properties:
+        language: { type: string, minLength: 1, maxLength: 50 }
+        title: { type: string, minLength: 3, maxLength: 255 }
+        codeSnippet: { type: string, minLength: 1, maxLength: 30000 }
+        errorLog: { type: string, minLength: 1, maxLength: 30000 }
+      required: [language, title, codeSnippet, errorLog]
+    Diagnosis:
+      type: object
+      properties:
+        rootCause: { type: string }
+        severity: { type: string, enum: [critical, high, medium, low, info] }
+        category:
+          type: string
+          enum: [syntax, runtime, type-memory, logical, database, configuration]
+        steps:
+          type: array
+          items: { type: string }
+        correctedCode: { type: string }
+        preventionTips: { type: string }
+      required: [rootCause, severity, category, steps, correctedCode, preventionTips]
+    DebugMessage:
+      type: object
+      properties:
+        id: { type: integer }
+        sender: { type: string, enum: [user, ai] }
+        message: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [id, sender, message, createdAt]
+    DebugSessionSummary:
+      type: object
+      properties:
+        id: { type: integer }
+        language: { type: string }
+        title: { type: string }
+        status: { type: string, enum: [open, resolved] }
+        severity:
+          type: ["string", "null"]
+          enum: [critical, high, medium, low, info, null]
+        rootCause:
+          type: ["string", "null"]
+        createdAt: { type: string, format: date-time }
+      required: [id, language, title, status, severity, rootCause, createdAt]
+    DebugSessionDetail:
+      type: object
+      properties:
+        id: { type: integer }
+        language: { type: string }
+        title: { type: string }
+        codeSnippet: { type: string }
+        errorLog: { type: string }
+        status: { type: string, enum: [open, resolved] }
+        createdAt: { type: string, format: date-time }
+        diagnosis: { $ref: "#/components/schemas/Diagnosis" }
+        messages:
+          type: array
+          items: { $ref: "#/components/schemas/DebugMessage" }
+      required: [id, language, title, codeSnippet, errorLog, status, createdAt, diagnosis, messages]
+    DebugSessionStatusInput:
+      type: object
+      properties:
+        status: { type: string, enum: [open, resolved] }
+      required: [status]
+    DebugMessageInput:
+      type: object
+      properties:
+        message: { type: string, minLength: 1, maxLength: 4000 }
+      required: [message]
+    DebugMessagePair:
+      type: object
+      properties:
+        userMessage: { $ref: "#/components/schemas/DebugMessage" }
+        aiMessage: { $ref: "#/components/schemas/DebugMessage" }
+      required: [userMessage, aiMessage]
+    LanguageCount:
+      type: object
+      properties:
+        language: { type: string }
+        count: { type: integer }
+      required: [language, count]
+    DebugSummary:
+      type: object
+      properties:
+        total: { type: integer }
+        open: { type: integer }
+        resolved: { type: integer }
+        languages:
+          type: array
+          items: { $ref: "#/components/schemas/LanguageCount" }
+        recent:
+          type: array
+          items: { $ref: "#/components/schemas/DebugSessionSummary" }
+      required: [total, open, resolved, languages, recent]
 
