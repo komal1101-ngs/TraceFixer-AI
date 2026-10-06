@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "TraceFixer AI"
+description = "A debugging co-pilot for developers: analyze code and stack traces across popular languages, get structured fixes, ask follow-up questions, and revisit saved sessions."
+version = "1.0.0"
+id = "artifacts/tracefixer-ai"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19982
+
+[services.development]
+run = "pnpm --filter @workspace/tracefixer-ai run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/tracefixer-ai", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/tracefixer-ai/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19982"
+BASE_PATH = "/"

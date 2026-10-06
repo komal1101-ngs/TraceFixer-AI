@@ -1,0 +1,94 @@
+# MASTER PROMPT: TraceFixer AI - Polyglot Code Debugging & Remediation Assistant
+
+## 1. Header & System Persona Role
+You are an expert Principal Software Engineer, AI Systems Architect, and Full-Stack Developer. Your task is to build a production-grade, end-to-end web application named **TraceFixer AI**. This application allows developers to paste buggy code snippets and error logs/stack traces in any programming language, get instant root-cause analysis, step-by-step rectification plans, corrected code patches, and maintain a searchable debugging history vault.
+
+## 2. Core Mission Directive
+Build a fully functioning, polished, robust, and responsive web application. Every UI component must be fully wired to a backend REST API and a PostgreSQL database. There must be zero placeholder pages, broken links, or mocked frontend states. The app must integrate the official `@google/genai` SDK to analyze code errors and return structured JSON diagnoses.
+
+## 3. Product Goal
+To provide developers with an instant, intelligent debugging co-pilot that demystifies cryptic stack traces, explains the "why" behind errors across all major programming languages, provides production-ready code patches, and saves debugging sessions for future reference.
+
+## 4. Mandatory Features
+1. **User Authentication:** Secure registration and login using JWT tokens and bcrypt password hashing.
+2. **Debug Submission Engine:** A multi-input form supporting language selection (Python, JS/TS, Go, Rust, Java, C++, SQL, etc.), code snippet input, and error log/stack trace paste.
+3. **Structured AI Diagnosis:** Gemini-powered analysis returning root cause explanation, severity level, step-by-step fix instructions, corrected code, and prevention tips.
+4. **Interactive Follow-Up Chat:** Ability to ask follow-up questions within a specific debugging session.
+5. **Debugging History Vault:** A searchable, filterable dashboard showing past debugging sessions with status badges (Open, Resolved).
+6. **One-Click Code Copy:** Quick copy buttons for corrected code patches.
+
+## 5. Technology Requirements
+- **Frontend:** React.js (with Vite), Tailwind CSS for styling, Lucide React for icons, React Router for navigation, and Axios or Fetch for API communication.
+- **Backend:** Node.js with Express.js REST API architecture.
+- **Database:** Replit PostgreSQL with node-postgres (`pg`) connection pooling.
+- **AI SDK:** `@google/genai` SDK utilizing `gemini-2.5-flash` for fast, structured code analysis.
+- **Validation:** Zod for runtime type checking on both client and server.
+
+## 6. Application Pages (Routes)
+- `/` - Landing page with product overview and quick CTA.
+- `/login` - User login page.
+- `/register` - User registration page.
+- `/dashboard` - Main dashboard displaying user's debugging history vault, search bar, and language filters.
+- `/debug/new` - The core submission interface for code and error logs.
+- `/debug/:id` - Detailed view of a specific debugging session showing original code, error log, structured AI diagnosis, and interactive follow-up chat.
+
+## 7. User Flow
+1. User visits landing page, registers or logs in, and lands on `/dashboard`.
+2. User clicks "New Debug Session", selects the programming language, pastes their broken code snippet and the error traceback/log, and clicks "Analyze & Fix".
+3. The system sends the payload to the backend, which queries the Gemini API with a strict JSON schema prompt.
+4. Gemini returns the structured diagnosis; the backend saves the session and diagnosis in Replit Postgres and redirects the user to `/debug/:id`.
+5. User reviews the root cause, copies the corrected code, or asks a follow-up question in the chat box.
+6. User can return to `/dashboard` anytime to search and review past debugging sessions.
+
+## 8. Target Languages & Categorization
+- Languages supported: Python, JavaScript, TypeScript, Go, Rust, Java, C++, C#, SQL, Ruby, PHP, Swift, Kotlin, Bash.
+- Error Categories: Syntax Error, Runtime Exception, Type/Memory Error, Logical Bug, Database/Query Error, Configuration/Build Error.
+
+## 9. Form & Advisory Configuration
+- Input fields:
+  - `language`: String (Dropdown of supported languages).
+  - `title`: String (Short summary of the bug, e.g., "TypeError in User Auth middleware").
+  - `code_snippet`: Textarea (The buggy code).
+  - `error_log`: Textarea (The stack trace or error message).
+
+## 10. Database Schema (Production SQL for PostgreSQL)
+Execute this schema setup on initialization:
+
+```sql
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  username VARCHAR(50) UNIQUE NOT NULL,
+  email VARCHAR(100) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS debug_sessions (
+  id SERIAL PRIMARY KEY,
+  user_id INT REFERENCES users(id) ON DELETE CASCADE,
+  language VARCHAR(50) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  code_snippet TEXT NOT NULL,
+  error_log TEXT NOT NULL,
+  status VARCHAR(20) DEFAULT 'open',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS ai_diagnoses (
+  id SERIAL PRIMARY KEY,
+  debug_session_id INT REFERENCES debug_sessions(id) ON DELETE CASCADE,
+  root_cause TEXT NOT NULL,
+  severity VARCHAR(20) NOT NULL,
+  step_by_step_fix JSONB NOT NULL,
+  corrected_code TEXT NOT NULL,
+  prevention_tips TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS session_messages (
+  id SERIAL PRIMARY KEY,
+  debug_session_id INT REFERENCES debug_sessions(id) ON DELETE CASCADE,
+  sender VARCHAR(20) NOT NULL, -- 'user' or 'ai'
+  message TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
